@@ -192,9 +192,9 @@ def transform(content_file, style_file, output_file):
     # try saving a dummy image to the output path to make sure that it's writable
     if os.path.isfile(output_file) and not options.overwrite:
         raise IOError("%s already exists, will not replace it without "
-                      "the '--overwrite' flag" % output_file)
+                      "the '--overwrite' flag" % options.output)
     try:
-        imsave(ouput_file, np.zeros((500, 500, 3)))
+        imsave(output_file, np.zeros((500, 500, 3)))
     except:
         raise IOError('%s is not writable or does not have a valid file '
                       'extension for an image file' % output_file)
@@ -265,8 +265,6 @@ def imread(path):
     elif img.shape[2] == 4:
         # PNG with alpha channel
         img = img[:,:,:3]
-
-
     return img
 
 
