@@ -42,12 +42,6 @@ def build_parser():
     parser.add_argument('--checkpoint-iterations', type=int,
             dest='checkpoint_iterations', help='checkpoint frequency',
             metavar='CHECKPOINT_ITERATIONS', default=None)
-    parser.add_argument('--progress-write', default=False, action='store_true',
-            help="write iteration progess data to OUTPUT's dir",
-            required=False)
-    parser.add_argument('--progress-plot', default=False, action='store_true',
-            help="plot iteration progess data to OUTPUT's dir",
-            required=False)
     parser.add_argument('--width', type=int,
             dest='width', help='output width',
             metavar='WIDTH')
@@ -55,45 +49,9 @@ def build_parser():
             dest='style_scales',
             nargs='+', help='one or more style scales',
             metavar='STYLE_SCALE')
-    parser.add_argument('--network',
-            dest='network', help='path to network parameters (default %(default)s)',
-            metavar='VGG_PATH', default=VGG_PATH)
-    parser.add_argument('--content-weight-blend', type=float,
-            dest='content_weight_blend',
-            help='content weight blend, conv4_2 * blend + conv5_2 * (1-blend) '
-                 '(default %(default)s)',
-            metavar='CONTENT_WEIGHT_BLEND', default=CONTENT_WEIGHT_BLEND)
-    parser.add_argument('--content-weight', type=float,
-            dest='content_weight', help='content weight (default %(default)s)',
-            metavar='CONTENT_WEIGHT', default=CONTENT_WEIGHT)
-    parser.add_argument('--style-weight', type=float,
-            dest='style_weight', help='style weight (default %(default)s)',
-            metavar='STYLE_WEIGHT', default=STYLE_WEIGHT)
-    parser.add_argument('--style-layer-weight-exp', type=float,
-            dest='style_layer_weight_exp',
-            help='style layer weight exponentional increase - '
-                 'weight(layer<n+1>) = weight_exp*weight(layer<n>) '
-                 '(default %(default)s)',
-            metavar='STYLE_LAYER_WEIGHT_EXP', default=STYLE_LAYER_WEIGHT_EXP)
     parser.add_argument('--style-blend-weights', type=float,
             dest='style_blend_weights', help='style blending weights',
             nargs='+', metavar='STYLE_BLEND_WEIGHT')
-    parser.add_argument('--tv-weight', type=float,
-            dest='tv_weight',
-            help='total variation regularization weight (default %(default)s)',
-            metavar='TV_WEIGHT', default=TV_WEIGHT)
-    parser.add_argument('--learning-rate', type=float,
-            dest='learning_rate', help='learning rate (default %(default)s)',
-            metavar='LEARNING_RATE', default=LEARNING_RATE)
-    parser.add_argument('--beta1', type=float,
-            dest='beta1', help='Adam: beta1 parameter (default %(default)s)',
-            metavar='BETA1', default=BETA1)
-    parser.add_argument('--beta2', type=float,
-            dest='beta2', help='Adam: beta2 parameter (default %(default)s)',
-            metavar='BETA2', default=BETA2)
-    parser.add_argument('--eps', type=float,
-            dest='epsilon', help='Adam: epsilon parameter (default %(default)s)',
-            metavar='EPSILON', default=EPSILON)
     parser.add_argument('--initial',
             dest='initial', help='initial image',
             metavar='INITIAL')
@@ -107,10 +65,6 @@ def build_parser():
             dest='preserve_colors',
             help='style-only transfer (preserving colors) - if color transfer '
                  'is not needed')
-    parser.add_argument('--pooling',
-            dest='pooling',
-            help='pooling layer configuration: max or avg (default %(default)s)',
-            metavar='POOLING', default=POOLING)
     parser.add_argument('--overwrite', action='store_true', dest='overwrite',
             help='write file even if there is already a file with that name')
     return parser
@@ -135,20 +89,9 @@ def transform(content_file, style_file, output_file):
     parser = build_parser()
     options = parser.parse_args()
 
-    if not os.path.isfile(options.network):
+    if not os.path.isfile(VGG_PATH):
         parser.error("Network %s does not exist. (Did you forget to "
-                     "download it?)" % options.network)
-
-    if [options.checkpoint_iterations,
-        options.checkpoint_output].count(None) == 1:
-        parser.error("use either both of checkpoint_output and "
-                     "checkpoint_iterations or neither")
-
-    if options.checkpoint_output is not None:
-        if re.match(r'^.*(\{.*\}|%.*).*$', options.checkpoint_output) is None:
-            parser.error("To save intermediate images, the checkpoint_output "
-                         "parameter must contain placeholders (e.g. "
-                         "`foo_{}.jpg` or `foo_%d.jpg`")
+                     "download it?)" % VGG_PATH)
 
     content_image = imread(content_file)
     style_images = [imread(style_file)]
@@ -201,61 +144,29 @@ def transform(content_file, style_file, output_file):
 
     loss_arrs = None
     for iteration, image, loss_vals in stylize(
-        network=options.network,
+        network=VGG_PATH,
         initial=initial,
         initial_noiseblend=options.initial_noiseblend,
         content=content_image,
         styles=style_images,
         preserve_colors=options.preserve_colors,
         iterations=options.iterations,
-        content_weight=options.content_weight,
-        content_weight_blend=options.content_weight_blend,
-        style_weight=options.style_weight,
-        style_layer_weight_exp=options.style_layer_weight_exp,
+        content_weight=CONTENT_WEIGHT,
+        content_weight_blend=CONTENT_WEIGHT_BLEND,
+        style_weight=STYLE_WEIGHT,
+        style_layer_weight_exp=STYLE_LAYER_WEIGHT_EXP,
         style_blend_weights=style_blend_weights,
-        tv_weight=options.tv_weight,
-        learning_rate=options.learning_rate,
-        beta1=options.beta1,
-        beta2=options.beta2,
-        epsilon=options.epsilon,
-        pooling=options.pooling,
+        tv_weight=TV_WEIGHT,
+        learning_rate=LEARNING_RATE,
+        beta1=BETA1,
+        beta2=BETA2,
+        epsilon=EPSILON,
+        pooling=POOLING,
         print_iterations=options.print_iterations,
         checkpoint_iterations=options.checkpoint_iterations,
     ):
-        if (image is not None) and (options.checkpoint_output is not None):
-            imsave(fmt_imsave(options.checkpoint_output, iteration), image)
-        if (loss_vals is not None) \
-                and (options.progress_plot or options.progress_write):
-            if loss_arrs is None:
-                itr = []
-                loss_arrs = OrderedDict((key, []) for key in loss_vals.keys())
-            for key,val in loss_vals.items():
-                loss_arrs[key].append(val)
-            itr.append(iteration)
 
     imsave(output_file, image)
-
-    if options.progress_write:
-        fn = "{}/progress.txt".format(os.path.dirname(output_file))
-        tmp = np.empty((len(itr), len(loss_arrs)+1), dtype=float)
-        tmp[:,0] = np.array(itr)
-        for ii,val in enumerate(loss_arrs.values()):
-            tmp[:,ii+1] = np.array(val)
-        np.savetxt(fn, tmp, header=' '.join(['itr'] + list(loss_arrs.keys())))
-
-
-    if options.progress_plot:
-        import matplotlib
-        matplotlib.use('Agg')
-        from matplotlib import pyplot as plt
-        fig,ax = plt.subplots()
-        for key, val in loss_arrs.items():
-            ax.semilogy(itr, val, label=key)
-        ax.legend()
-        ax.set_xlabel("iterations")
-        ax.set_ylabel("loss")
-        fig.savefig("{}/progress.png".format(os.path.dirname(output_file)))
-
 
 def imread(path):
     img = scipy.misc.imread(path).astype(np.float)
