@@ -4,16 +4,28 @@ import json
 import argparse
 import time
 from statistics import mean
-import redis
+import jsonpickle
+#import redis
 import os.path
+import scipy.misc
+import numpy as np
+
+def imread(path):
+    img = scipy.misc.imread(path).astype(np.float)
+    if len(img.shape) == 2:
+        # grayscale
+        img = np.dstack((img,img,img))
+    elif img.shape[2] == 4:
+        # PNG with alpha channel
+        img = img[:,:,:3]
+    return img
 
 def upload_pics(address, content_file, style_file, output_file):
-    files = {"style": open(style_file, "rb"), "content": open(content_file, "rb")}
-    r = requests.post('http://httpbin.org/post', files=files)
-    #headers = {'content-type': 'image/png'}
-    #img = open(image_file, 'rb').read()
+    data = {"style": imread(style_file), "content": imread(content_file),
+            "output_file": output_file}
+
     image_url = address + '/image/'+os.path.basename(content_file)
-    return requests.put(image_url, files=files)#, headers=headers)
+    return requests.put(image_url, data=jsonpickle.encode(data))
 
 def main(server_address, endpoint, content_file, style_file, output_file):
     address = 'http://'+server_address+':5000'
