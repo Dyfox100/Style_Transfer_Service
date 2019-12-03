@@ -93,8 +93,8 @@ def transform(content_file, style_file, output_file):
         parser.error("Network %s does not exist. (Did you forget to "
                      "download it?)" % VGG_PATH)
 
-    content_image = imread(content_file)
-    style_images = [imread(style_file)]
+    content_image = content_file
+    style_images = [style_file]
 
     width = options.width
     if width is not None:
@@ -165,6 +165,7 @@ def transform(content_file, style_file, output_file):
         print_iterations=options.print_iterations,
         checkpoint_iterations=options.checkpoint_iterations,
     ):
+        continue
 
     imsave(output_file, image)
 
@@ -177,7 +178,6 @@ def imread(path):
         # PNG with alpha channel
         img = img[:,:,:3]
     return img
-
 
 def imsave(path, img):
     img = np.clip(img, 0, 255).astype(np.uint8)

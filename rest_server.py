@@ -2,7 +2,9 @@
 from flask import Flask, request, Response
 import jsonpickle
 import io
-import redis
+import hashlib
+from neural_style_mod import transform
+#import redis
 
 def send_to_worker_queue(message):
     """
@@ -10,8 +12,7 @@ def send_to_worker_queue(message):
     "task_queue" hosted on the "rabbitmq" VM using "toWorker" exchange.
 
     Parameters:
-    - message(jsonpickle object): A dictionary {"hash": hash, "image": image_bytes}
-    encoded (serialized) to be a jsonpickle object.
+    - message(jsonpickle object):
 
     """
     connection = pika.BlockingConnection(
@@ -75,107 +76,37 @@ app = Flask(__name__)
 @app.route('/image/<string:filename>', methods=['PUT'])
 def transform_image(filename):
     """
-    This function hashes the image, sends the hash and image to worker queue, stores
-    the filename:hash key-value pair in Redis database 2 and sends error or success messages
-    to the logs.
+    This function...
 
     Parameters:
-    - filename(str): The name of the image file
-    - request.data(byte): The image byte string
 
     Returns:
     - response(jsonpickle object): If request is successful, the response to the client
     is a HTTP 200 code and the hash of the image. If request is unsuccessful, the Response
     is a HTTP 500 code and the associated error.
     """
-    print(request.files)
-    print(request.files["style"])
-    response = {"message": "hi"}
-    response = Response(response=jsonpickle.encode(response),
-                        status=200, mimetype="application/json")
-    return response
-    """
+
+    data = jsonpickle.decode(request.data)
+    #transform(data["content"], data["style"], data["output_file"])
+
     hash = None
     try:
-        hash = hashlib.md5(request.data).hexdigest()
-        message = {
-            "hash" : hash,
-            "image" : request.data
-            }
-        send_to_worker_queue(jsonpickle.encode(message))
-        send_to_redis(filename, message["hash"], 2)
+        hash = hashlib.md5(data["content"]).hexdigest()
+        data.update({"hash": hash})
+        print(data)
+        send_to_worker_queue(jsonpickle.encode(data))
+        #send_to_redis(filename, message["hash"], 2)
         response = {
             "hash" : hash,
             }
         response = Response(response=jsonpickle.encode(response), status=200, mimetype="application/json")
-        send_to_logs("Image Received: " +filename+ ", Hash: "+hash+", Status code: "+str(response.status_code))
+        #send_to_logs("Image Received: " +filename+ ", Hash: "+hash+", Status code: "+str(response.status_code))
         return response
 
     except Exception as inst:
         response = {"Error": inst}
         response = Response(response=jsonpickle.encode(response), status=500, mimetype="application/json")
-        send_to_logs("Image Received: " +filename + ", Hash: "+hash+", Status code: "+str(response.status_code)+ ", Error: " +str(inst))
-        return response
-    """
-
-@app.route('/hash/<string:checksum>', methods=['GET'])
-def get_geotags(checksum):
-    """
-    This function takes a particular hash value as a key and returns all plate values
-    from Redis database 1 associated with this key. It also sends error or success messages
-    to the logs.
-
-    Parameters:
-    - checksum(str): The MD5 hash value of the images
-
-    Returns:
-    - response(jsonpickle object): If request is successful, the response to the client
-    is a HTTP 200 code and the plates associated with the hash value. If request is
-    unsuccessful, the Response is a HTTP 500 code and the associated error.
-
-    """
-    try:
-        r = redis.Redis(host='redis', port=6379, db=1)
-        plates = jsonpickle.decode(r.get(checksum))
-        response = {"plates": plates}
-        response = Response(response=jsonpickle.encode(response), status=200, mimetype="application/json")
-        send_to_logs("Query: "+checksum+", Status code: "+str(response.status_code)+ ", Results : " + str(r.get(checksum)))
-        return response
-
-    except Exception as inst:
-        response = {"Error": inst}
-        response = Response(response=jsonpickle.encode(response), status=500, mimetype="application/json")
-        send_to_logs("Query: "+checksum+", Status code: "+str(response.status_code)+", Error: " +str(inst))
-        return response
-
-@app.route('/license/<string:license>', methods=['GET'])
-def get_license_plates(license):
-    """
-    This function takes a license plate as a key and returns the set of hash values which
-    contain this license plate from Redis database 3. It also sends error or success
-    messages to the logs.
-
-    Parameters:
-    - license(str): A particular license plate
-
-    Returns:
-    - response(jsonpickle object): If request is successful, the response to the client
-    is a HTTP 200 code and the hash values associated with the plate. If request is
-    unsuccessful, the Response is a HTTP 500 code and the associated error.
-
-    """
-    try:
-        r = redis.Redis(host='redis', port=6379, db=3)
-        hashes = jsonpickle.decode(r.get(license))
-        response = {"hashes": list(set(hashes))}
-        response = Response(response=jsonpickle.encode(response), status=200, mimetype="application/json")
-        send_to_logs("Query: "+license+", Status code: "+str(response.status_code)+ ", Results : " + str(set(hashes)))
-        return response
-
-    except Exception as inst:
-        response = {"Error": inst}
-        response = Response(response=jsonpickle.encode(response), status=500, mimetype="application/json")
-        send_to_logs("Query: "+license+", Status code: "+str(response.status_code)+", Error: " +str(inst))
+        #send_to_logs("Image Received: " +filename + ", Hash: "+hash+", Status code: "+str(response.status_code)+ ", Error: " +str(inst))
         return response
 
 app.run(host="0.0.0.0", port=5000)
