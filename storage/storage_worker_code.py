@@ -14,7 +14,7 @@ def upload_picture_to_bucket(image_bytes):
     blob_name = hashlib.md5(image_bytes).hexdigest()
     bucket_name = 'test-images-12345'
     file_name = "moon.jpg"
-    storage_client = storage.Client('focus-vertex-251719')
+    storage_client = storage.Client()
     bucket = None
     buckets = storage_client.list_buckets()
     bucket_names = []
