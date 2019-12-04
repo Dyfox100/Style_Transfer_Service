@@ -26,6 +26,18 @@ def upload_picture_to_bucket(image_bytes):
         bucket = storage_client.get_bucket(bucket_name)
     blob = bucket.blob(blob_name)
     blob.upload_from_string(image_bytes, content_type='image/jpg')
+    return blob_name
+
+def get_image_from_bucket(image_hash):
+    bucket_name = 'test-images-12345'
+    storage_client = storage.Client()
+    bucket = storage_client.get_bucket(bucket_name)
+    blob = bucket.blob(image_hash)
+    image_returned = blob.download_as_string()
+    return image_returned
+
 
 if __name__ == "__main__":
-    upload_picture_to_bucket(setup_test_image())
+    hash = upload_picture_to_bucket(setup_test_image())
+    print('upload complete')
+    print(get_image_from_bucket(hash))
