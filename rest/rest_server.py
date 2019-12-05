@@ -3,7 +3,6 @@ from flask import Flask, request, Response
 import jsonpickle
 import io
 import hashlib
-from neural_style_mod import transform
 #import redis
 
 def send_to_worker_queue(message):

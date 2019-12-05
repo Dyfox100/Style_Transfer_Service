@@ -8,28 +8,6 @@ import redis
 import socket
 from neural_style_mod import transform
 
-
-
-def get_license_plates(image_array):
-    alpr = Alpr('us', '/etc/openalpr/openalpr.conf', '/usr/share/openalpr/runtime_data')
-    results = alpr.recognize_array(image_array)
-    redis_dict = {}
-    plates = []
-    try:
-        for i in range(len(results["results"])):
-            tmp_dict = {}
-            tmp_dict.update({"plate": results["results"][i]["plate"]})
-            tmp_dict.update({"confidence": results["results"][i]["confidence"]})
-            plates.append(tmp_dict)
-    except:
-        print("License plate not found")
-
-    redis_dict.update({"plates": plates})
-    coordinates = getLatLon(image_array)
-    redis_dict.update({"latitude": coordinates[0], "longitude": coordinates[1]})
-
-    return redis_dict
-
 def send_to_redis(key, value, db_number):
     """
     This function puts a key-value pair into a user-defined Redis database
