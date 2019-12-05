@@ -8,7 +8,6 @@ import redis
 import socket
 from neural_style_mod import transform
 
-
 def send_to_redis(key, value, db_number):
     """
     This function puts a key-value pair into a user-defined Redis database
