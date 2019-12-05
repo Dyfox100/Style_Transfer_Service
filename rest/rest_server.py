@@ -3,6 +3,7 @@ from flask import Flask, request, Response
 import jsonpickle
 import io
 import hashlib
+import pika
 #import redis
 
 def send_to_worker_queue(message):
@@ -93,19 +94,19 @@ def transform_image(filename):
         hash = hashlib.md5(data["content"]).hexdigest()
         data.update({"hash": hash})
         print(data)
-        send_to_worker_queue(jsonpickle.encode(data))
+        #send_to_worker_queue(jsonpickle.encode(data))
         #send_to_redis(filename, message["hash"], 2)
         response = {
             "hash" : hash,
             }
         response = Response(response=jsonpickle.encode(response), status=200, mimetype="application/json")
-        #send_to_logs("Image Received: " +filename+ ", Hash: "+hash+", Status code: "+str(response.status_code))
+        send_to_logs("Image Received: " +filename+ ", Hash: "+hash+", Status code: "+str(response.status_code))
         return response
 
     except Exception as inst:
         response = {"Error": inst}
         response = Response(response=jsonpickle.encode(response), status=500, mimetype="application/json")
-        #send_to_logs("Image Received: " +filename + ", Hash: "+hash+", Status code: "+str(response.status_code)+ ", Error: " +str(inst))
+        send_to_logs("Image Received: " +filename + ", Hash: "+hash+", Status code: "+str(response.status_code)+ ", Error: " +str(inst))
         return response
 
 app.run(host="0.0.0.0", port=5000)
