@@ -11,18 +11,18 @@ def upload_pics(address, content_file_path, style_file_path):
 
     #get raw image from content file and style file
     byte_stream = io.BytesIO()
-    content_image = Image(content_file_path)
+    content_image = Image.open(content_file_path)
     content_image.save(byte_stream, format='JPEG')
     content_bytes = byte_stream.getvalue()
 
     byte_stream = io.BytesIO()
-    style_image = Image(style_file_path)
+    style_image = Image.open(style_file_path)
     style_image.save(byte_stream, format="JPEG")
-    style_bytes = byte_stream.get
+    style_bytes = byte_stream.getvalue()
 
 
     data = {"style":style_bytes , "content":content_bytes}
-    
+
     return requests.put(address, data=jsonpickle.encode(data))
 
 def main(server_address, endpoint, content_file, style_file):
@@ -32,6 +32,8 @@ def main(server_address, endpoint, content_file, style_file):
         address += '/image'
         response = upload_pics(address, content_file,
                                style_file).json()
+        while response is None:
+            pass
         print(response)
 
 if __name__ == '__main__':
@@ -52,7 +54,7 @@ if __name__ == '__main__':
 
     parser.add_argument('endpoint',
                         type=str,
-                        default="image"
+                        default="image",
                         help='The endpoint of the server to query.')
 
     args = parser.parse_args()
