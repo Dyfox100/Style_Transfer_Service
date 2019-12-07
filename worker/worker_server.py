@@ -47,7 +47,7 @@ def upload_picture_to_bucket(image_bytes, hash_value):
     for blob in blobs:
         num_blobs += 1
 
-    blob = bucket.blob(num_blobs)
+    blob = bucket.blob(str(num_blobs))
     blob.upload_from_string(image_bytes, content_type='image/jpg')
 
 def send_to_logs(message):
@@ -103,10 +103,10 @@ def callback(ch, method, properties, body):
         data = jsonpickle.decode(body)
         hash_value = data['hash']
 
-        #Get file type object for target and style so we cna use imread
+        #Get file type object for target and style so we can use imread helper.
         target_image = io.BytesIO(data['content'])
         style_image = io.BytesIO(data['style'])
-        transformed_image = transform(_imread(moon), _imread(explosion))
+        transformed_image = transform(_imread(target_image), _imread(style_image))
 
         #Convert back to bytes from np floating point array
         transformed_image_bytes = io.BytesIO()
@@ -118,7 +118,7 @@ def callback(ch, method, properties, body):
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
     except Exception as e:
-        send_to_logs(e)
+        send_to_logs(str(e))
 
 if __name__ == "__main__":
     #Rabbitmq setup / start consuming
