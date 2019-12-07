@@ -6,6 +6,24 @@ import jsonpickle
 import hashlib
 import pika
 
+def _get_image_from_storage_bucket(hash):
+    bucket_name = 'csci5253-style'
+    bucket_name += '-' + hash_value
+
+    storage_client = storage.Client()
+
+    bucket = storage_client.get_bucket(bucket_name)
+
+    blobs = bucket.list_blobs()
+    num_blobs = -1
+    for blob in blobs:
+        num_blobs += 1
+
+    blob = bucket.blob(str(num_blobs))
+    image_returned = blob.download_as_string()
+
+    return image_returned
+
 def send_to_worker_queue(message):
     """
     This function takes a message and sends it to a RabbitMQ worker queue
@@ -102,9 +120,10 @@ def get_transformed_image(hashvalue):
     """
 
     try:
-        ##TO DO: ADD GET Route
-        pass
-
+        data = {'image': _get_image_from_storage_bucket(hashvalue)}
+        response = Response(response=jsonpickle.encode(data), status=200, mimetype="application/json")
+        return response
+        
     except Exception as e:
         response = Response(status=500, mimetype="application/json")
         send_to_logs("Image Received: " +filename + ", Hash: "+hash+", Status code: "+str(response.status_code)+ ", Error: " +str(e))
