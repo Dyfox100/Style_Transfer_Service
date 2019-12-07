@@ -79,7 +79,7 @@ def fmt_imsave(fmt, iteration):
         raise ValueError("illegal format string '{}'".format(fmt))
 
 
-def transform(content_file, style_file, output_file):
+def transform(content_file, style_file):
 
     # https://stackoverflow.com/a/42121886
     key = 'TF_CPP_MIN_LOG_LEVEL'
@@ -132,16 +132,6 @@ def transform(content_file, style_file, output_file):
         if options.initial_noiseblend < 1.0:
             initial = content_image
 
-    # try saving a dummy image to the output path to make sure that it's writable
-    if os.path.isfile(output_file) and not options.overwrite:
-        raise IOError("%s already exists, will not replace it without "
-                      "the '--overwrite' flag" % options.output)
-    try:
-        imsave(output_file, np.zeros((500, 500, 3)))
-    except:
-        raise IOError('%s is not writable or does not have a valid file '
-                      'extension for an image file' % output_file)
-
     loss_arrs = None
     for iteration, image, loss_vals in stylize(
         network=VGG_PATH,
@@ -167,7 +157,7 @@ def transform(content_file, style_file, output_file):
     ):
         continue
 
-    imsave(output_file, image)
+    return image
 
 def imread(path):
     img = scipy.misc.imread(path).astype(np.float)

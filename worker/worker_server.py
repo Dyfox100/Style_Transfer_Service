@@ -1,42 +1,58 @@
 #!/usr/bin/env python
-import pika
-import time
-import sys
+
+from google.cloud import storage
 import jsonpickle
+import hashlib
 import io
-import redis
-import socket
+import numpy as np #needed to convert image to right file type for style transfer lib
+import pika
+from PIL import Image
+import scipy.misc #needed to convert image to right file type for style transfer lib
+import sys
+
 from neural_style_mod import transform
 
-def send_to_redis(key, value, db_number):
+
+def upload_picture_to_bucket(image_bytes, hash_value):
     """
-    This function puts a key-value pair into a user-defined Redis database
+    This function uploads an image to the a gcp storage bucket.
+    The storage blob is named by the value given in hash value.
 
     Parameter:
-    - key (str): The key of the key-value pair. In the case of our first
-    API endpoint, it is the filename of the image.
-    - value (varies): The value of the key-value pair.
-    - db_number: The Redis database where we wish to store key-value pair
-
+    -image_bytes(bytes): the image to upload
+    -hash_value(str): md5 hash value of image bytes. Bucket is named after this. Blob is incremented once for every image uploaded.
     """
-    r=redis.Redis(host='redis', port=6379, db=db_number)
-    r.set(key, value)
 
-def get_from_redis(key, db_number):
-    """
-    This function takes a key and returns the associated value from a
-    user-defined Redis database
+    bucket_name = 'csci5253-style'
+    bucket_name += '-' + hash_value
 
-    Parameters:
-    - key (str): The key of the key-value pair.
+    storage_client = storage.Client()
 
-    """
-    r=redis.Redis(host='redis', port=6379, db=db_number)
-    return r.get(key)
+    #get all bucket names
+    bucket = None
+    buckets = storage_client.list_buckets()
+    bucket_names = []
+    for bucket in buckets:
+        bucket_names.append(bucket.name)
+
+    #if bucket exists, get it, otherwise create it
+    if bucket_name not in bucket_names:
+        bucket = storage_client.create_bucket(bucket_name)
+    else:
+        bucket = storage_client.get_bucket(bucket_name)
+
+    #Get all blobs names. Create incrementer for blob name
+    blobs = bucket.list_blobs()
+    num_blobs = 0
+    for blob in blobs:
+        num_blobs += 1
+
+    blob = bucket.blob(str(num_blobs))
+    blob.upload_from_string(image_bytes, content_type='image/jpg')
 
 def send_to_logs(message):
     """
-    This function takes a log message and sends it to a RabbitMQ "rest.debug" topic
+    This function takes a log message and sends it to a RabbitMQ "worker.debug" topic
     hosted on the "rabbitmq" VM using "logs" exchange.
 
     Parameters:
@@ -50,14 +66,29 @@ def send_to_logs(message):
     channel.exchange_declare(exchange='logs', exchange_type='topic')
     channel.basic_publish(
         exchange='logs',
-        routing_key='rest.debug',
+        routing_key='worker.debug',
         body=message,
         properties=pika.BasicProperties(
             delivery_mode=2,
         ))
-
-    #print("Logs delivered")
     connection.close()
+
+
+def _imread(image_file_or_path):
+    """Utility function to convert image to same format as style transfer library requires.
+    Parameters:
+    -image_file_or_path(str or file object): A file path string to the image,
+        or a object that implements file semantics, and has image in it.
+    """
+    img = scipy.misc.imread(image_file_or_path).astype(np.float)
+    if len(img.shape) == 2:
+        # grayscale
+        img = np.dstack((img,img,img))
+    elif img.shape[2] == 4:
+        # PNG with alpha channel
+        img = img[:,:,:3]
+    return img
+
 
 def callback(ch, method, properties, body):
     """
@@ -67,18 +98,36 @@ def callback(ch, method, properties, body):
     Parameters:
     - body(jsonpickle object): The body of the request
     """
-    data = jsonpickle.decode(body)
+
     try:
-        transform(data["content"], data["style"], data["output_file"])
-    ch.basic_ack(delivery_tag=method.delivery_tag)
+        data = jsonpickle.decode(body)
+        hash_value = data['hash']
 
-connection = pika.BlockingConnection(
-    pika.ConnectionParameters(host='rabbitmq'))
-channel = connection.channel()
-channel.queue_declare(queue='task_queue', durable=True)
+        #Get file type object for target and style so we can use imread helper.
+        target_image = io.BytesIO(data['content'])
+        style_image = io.BytesIO(data['style'])
+        transformed_image = transform(_imread(target_image), _imread(style_image))
 
-#print(' [*] Waiting for messages. To exit press CTRL+C')
+        #Convert back to bytes from np floating point array
+        transformed_image_bytes = io.BytesIO()
+        transformed_image = np.clip(transformed_image, 0, 255).astype(np.uint8)
+        image = Image.fromarray(transformed_image)
+        image.save(transformed_image_bytes,format='JPEG')
+        upload_picture_to_bucket(transformed_image_bytes.getvalue(), hash_value)
+        #Successfully transformed and uploaded
+        ch.basic_ack(delivery_tag=method.delivery_tag)
 
-channel.basic_qos(prefetch_count=1)
-channel.basic_consume(queue='task_queue', on_message_callback=callback)
-channel.start_consuming()
+    except Exception as e:
+        send_to_logs(str(e))
+
+if __name__ == "__main__":
+    #Rabbitmq setup / start consuming
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host='rabbitmq'))
+    channel = connection.channel()
+    channel.queue_declare(queue='task_queue', durable=True)
+
+    channel.basic_qos(prefetch_count=1)
+    channel.basic_consume(queue='task_queue', on_message_callback=callback)
+
+    channel.start_consuming()

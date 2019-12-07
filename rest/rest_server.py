@@ -1,10 +1,10 @@
 #!/usr/bin/env python
+
 from flask import Flask, request, Response
-import jsonpickle
 import io
+import jsonpickle
 import hashlib
 import pika
-#import redis
 
 def send_to_worker_queue(message):
     """
@@ -28,7 +28,6 @@ def send_to_worker_queue(message):
         properties=pika.BasicProperties(
             delivery_mode=2,
         ))
-    #print("Message delivered")
     connection.close()
 
 def send_to_logs(message):
@@ -52,31 +51,17 @@ def send_to_logs(message):
         properties=pika.BasicProperties(
             delivery_mode=2,
         ))
-
-    #print("Logs delivered")
     connection.close()
 
-def send_to_redis(key, value, db_number):
-    """
-    This function puts a key-value pair into a user-defined Redis database
 
-    Parameter:
-    - key (str): The key of the key-value pair. In the case of our first
-    API endpoint, it is the filename of the image.
-    - value (str): The value of the key-value pair. In the case of our first
-    API endpoint, it is the hash value of the images
-    - db_number: The Redis database where we wish to store key-value pair
-
-    """
-    r=redis.Redis(host='redis', port=6379, db=db_number)
-    r.set(key, value)
-
-# Initialize the Flask application
+#######################
+#FLASK APP CODE FOR ENDPOINTS
 app = Flask(__name__)
-@app.route('/image/<string:filename>', methods=['PUT'])
-def transform_image(filename):
+
+@app.route('/image', methods=['PUT'])
+def transform_image():
     """
-    This function...
+    Route to style transfer two images.
 
     Parameters:
 
@@ -86,27 +71,44 @@ def transform_image(filename):
     is a HTTP 500 code and the associated error.
     """
 
-    data = jsonpickle.decode(request.data)
-    #transform(data["content"], data["style"], data["output_file"])
-
-    hash = None
     try:
+        data = jsonpickle.decode(request.data)
         hash = hashlib.md5(data["content"]).hexdigest()
         data.update({"hash": hash})
-        print(data)
-        #send_to_worker_queue(jsonpickle.encode(data))
-        #send_to_redis(filename, message["hash"], 2)
+        send_to_worker_queue(jsonpickle.encode(data))
         response = {
             "hash" : hash,
             }
         response = Response(response=jsonpickle.encode(response), status=200, mimetype="application/json")
-        send_to_logs("Image Received: " +filename+ ", Hash: "+hash+", Status code: "+str(response.status_code))
+        send_to_logs("Image Received: Hash: "+hash+", Status code: "+str(response.status_code))
         return response
 
-    except Exception as inst:
-        response = {"Error": inst}
-        response = Response(response=jsonpickle.encode(response), status=500, mimetype="application/json")
-        send_to_logs("Image Received: " +filename + ", Hash: "+hash+", Status code: "+str(response.status_code)+ ", Error: " +str(inst))
+    except Exception as e:
+        response = Response(status=500, mimetype="application/json")
+        send_to_logs("Image Received: " +filename + ", Hash: "+hash+", Status code: "+str(response.status_code)+ ", Error: " +str(e))
         return response
 
-app.run(host="0.0.0.0", port=5000)
+@app.route('/image/<hashvalue>', methods=['GET'])
+def get_transformed_image(hashvalue):
+    """
+    Route to get an image that has been style transfered.
+
+    Parameters:
+
+    Returns:
+    - response(jsonpickle object): If request is successful, the response to the client
+    is a HTTP 200 code and the hash of the image. If request is unsuccessful, the Response
+    is a HTTP 500 code and the associated error.
+    """
+
+    try:
+        ##TO DO: ADD GET Route
+        pass
+
+    except Exception as e:
+        response = Response(status=500, mimetype="application/json")
+        send_to_logs("Image Received: " +filename + ", Hash: "+hash+", Status code: "+str(response.status_code)+ ", Error: " +str(e))
+        return response
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)

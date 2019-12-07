@@ -14,5 +14,6 @@ ADD stylize.py stylize.py
 ADD vgg.py vgg.py
 ADD neural_style_mod.py neural_style_mod.py
 ADD worker_server.py worker_server.py
+RUN pip3 install google-cloud-storage
 RUN chmod 777 stylize.py && chmod 777 vgg.py && chmod 777 neural_style_mod.py && chmod 777 worker_server.py
 CMD python3 worker_server.py
