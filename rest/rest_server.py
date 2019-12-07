@@ -89,7 +89,7 @@ def transform_image():
         return response
 
 @app.route('/image/<hashvalue>', methods=['GET'])
-def (hashvalue):
+def get_transformed_image(hashvalue):
     """
     Route to get an image that has been style transfered.
 
