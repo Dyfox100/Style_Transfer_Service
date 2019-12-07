@@ -8,7 +8,7 @@ RUN apt-get update && \
     mkdir style_rest
 
 WORKDIR /style_rest
-ADD logs_consumer.py logs_consumer.py
+ADD logs-consumer.py logs_consumer.py
 ADD rest_server.py rest_server.py
 EXPOSE 5000
 RUN chmod 777 rest_server.py
