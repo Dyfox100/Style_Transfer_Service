@@ -6,7 +6,7 @@ RUN apt-get update && \
     pip3 install jsonpickle && \
     pip3 install redis && \
     mkdir style_rest
-
+RUN pip3 install google-cloud-storage
 WORKDIR /style_rest
 ADD logs-consumer.py logs_consumer.py
 ADD rest_server.py rest_server.py
