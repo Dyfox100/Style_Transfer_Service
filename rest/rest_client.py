@@ -7,8 +7,8 @@ from PIL import Image
 import requests
 
 
-def upload_pics(address, content_file_path, style_file_path):
-    address += '/image'
+def upload_pics(address, content_file_path, style_file_path, iterations):
+    address += '/image/' + str(iterations)
     #get raw image from content file and style file
     byte_stream = io.BytesIO()
     content_image = Image.open(content_file_path)
@@ -39,14 +39,14 @@ def get_pics(address, hash):
     print('Image finished saving')
 
 
-def main(server_address, endpoint, content_file=None, style_file=None, hash=None):
+def main(server_address, endpoint, iterations, content_file=None, style_file=None, hash=None):
     address = 'http://'+server_address+':5000'
     if endpoint == 'transformed':
         get_pics(address, hash)
 
     if endpoint == "image":
         response = upload_pics(address, content_file,
-                               style_file).json()
+                               style_file, iterations).json()
         while response is None:
             pass
 
@@ -60,22 +60,30 @@ if __name__ == '__main__':
                         type=str,
                         help='Address of the server.')
 
-    parser.add_argument('content_file',
+    parser.add_argument('endpoint',
+                        type=str,
+                        help='The endpoint of the server to query. Either image or transformed.')
+    parser.add_argument('iterations',
+                        type=int,
+                        default=100,
+                        help="The number of epochs of training of nural net for style transfer")
+
+    parser.add_argument('-content_file',
+                        default=None,
                         type=str,
                         help='The file to transform.')
 
-    parser.add_argument('style_file',
+    parser.add_argument('-style_file',
+                        default=None,
                         type=str,
                         help='The source file for the style.')
 
-    parser.add_argument('endpoint',
-                        type=str,
-                        help='The endpoint of the server to query.')
-    parser.add_argument('image_hash',
+    parser.add_argument('-hash',
+                        default=None,
                         type=str,
                         help='Image hash to get a transformed image.')
 
-    args = parser.parse_args()
 
-    main(args.server_address, args.endpoint, args.content_file,
-         args.style_file, args.image_hash)
+    args = parser.parse_args()
+    main(args.server_address, args.endpoint,args.iterations, args.content_file,
+         args.style_file, args.hash)
