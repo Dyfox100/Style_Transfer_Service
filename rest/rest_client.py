@@ -8,7 +8,7 @@ import requests
 
 
 def upload_pics(address, content_file_path, style_file_path):
-
+    address += '/image'
     #get raw image from content file and style file
     byte_stream = io.BytesIO()
     content_image = Image.open(content_file_path)
@@ -20,20 +20,36 @@ def upload_pics(address, content_file_path, style_file_path):
     style_image.save(byte_stream, format="JPEG")
     style_bytes = byte_stream.getvalue()
 
-
     data = {"style":style_bytes , "content":content_bytes}
 
     return requests.put(address, data=jsonpickle.encode(data))
 
-def main(server_address, endpoint, content_file, style_file):
+def get_pics(address, hash):
+    response = requests.get(address + '/image/' + hash)
+    while response is None:
+        pass
+    if 'message' in response.json():
+        print(response.json())
+        return response.json()['message']
+    data = jsonpickle.decode(response.content)
+    byte_stream = io.BytesIO()
+    byte_stream.write(data['image'])
+    image = Image.open(byte_stream)
+    image.save(hash + '.jpg', format='JPEG')
+    print('Image finished saving')
+
+
+def main(server_address, endpoint, content_file=None, style_file=None, hash=None):
     address = 'http://'+server_address+':5000'
+    if endpoint == 'transformed':
+        get_pics(address, hash)
 
     if endpoint == "image":
-        address += '/image'
         response = upload_pics(address, content_file,
                                style_file).json()
         while response is None:
             pass
+
         print(response)
 
 if __name__ == '__main__':
@@ -54,10 +70,12 @@ if __name__ == '__main__':
 
     parser.add_argument('endpoint',
                         type=str,
-                        default="image",
                         help='The endpoint of the server to query.')
+    parser.add_argument('image_hash',
+                        type=str,
+                        help='Image hash to get a transformed image.')
 
     args = parser.parse_args()
 
     main(args.server_address, args.endpoint, args.content_file,
-         args.style_file)
+         args.style_file, args.image_hash)

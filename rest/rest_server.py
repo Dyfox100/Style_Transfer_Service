@@ -1,10 +1,32 @@
 #!/usr/bin/env python
 
 from flask import Flask, request, Response
+from google.cloud import storage
 import io
 import jsonpickle
 import hashlib
 import pika
+
+def _get_image_from_storage_bucket(hash):
+    bucket_name = 'csci5253-style'
+    bucket_name += '-' + hash
+
+    storage_client = storage.Client()
+    try:
+        bucket = storage_client.get_bucket(bucket_name)
+
+        blobs = bucket.list_blobs()
+        num_blobs = -1
+        for blob in blobs:
+            num_blobs += 1
+
+        blob = bucket.blob(str(num_blobs))
+
+        image_returned = blob.download_as_string()
+    except:
+        image_returned = None
+
+    return image_returned
 
 def send_to_worker_queue(message):
     """
@@ -85,7 +107,7 @@ def transform_image():
 
     except Exception as e:
         response = Response(status=500, mimetype="application/json")
-        send_to_logs("Image Received: " +filename + ", Hash: "+hash+", Status code: "+str(response.status_code)+ ", Error: " +str(e))
+        send_to_logs("Image Received:" + hash + " Status code: "+str(response.status_code)+ ", Error: " +str(e))
         return response
 
 @app.route('/image/<hashvalue>', methods=['GET'])
@@ -102,12 +124,18 @@ def get_transformed_image(hashvalue):
     """
 
     try:
-        ##TO DO: ADD GET Route
-        pass
+        data = _get_image_from_storage_bucket(hashvalue)
+        print(data)
+        if data:
+            data = {'image': data}
+        else:
+            data = {'message': 'Image Not Available (did you wait long enough??)'}
+        response = Response(response=jsonpickle.encode(data), status=200, mimetype="application/json")
+        return response
 
     except Exception as e:
         response = Response(status=500, mimetype="application/json")
-        send_to_logs("Image Received: " +filename + ", Hash: "+hash+", Status code: "+str(response.status_code)+ ", Error: " +str(e))
+        send_to_logs("Image Received: Hash: "+hashvalue+", Status code: "+str(response.status_code)+ ", Error: " +str(e))
         return response
 
 if __name__ == "__main__":
