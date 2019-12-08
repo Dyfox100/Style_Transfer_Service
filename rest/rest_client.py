@@ -60,6 +60,10 @@ if __name__ == '__main__':
                         type=str,
                         help='Address of the server.')
 
+    parser.add_argument('endpoint',
+                        type=str,
+                        help='The endpoint of the server to query. Either image or transformed.')
+
     parser.add_argument('-content_file',
                         default=None,
                         type=str,
@@ -70,16 +74,11 @@ if __name__ == '__main__':
                         type=str,
                         help='The source file for the style.')
 
-    parser.add_argument('endpoint',
-                        type=str,
-                        help='The endpoint of the server to query.')
     parser.add_argument('-hash',
                         default=None,
                         type=str,
                         help='Image hash to get a transformed image.')
 
     args = parser.parse_args()
-    if args.hash:
-        hash = args.hash
     main(args.server_address, args.endpoint, args.content_file,
          args.style_file, args.hash)
