@@ -12,15 +12,7 @@ import sys
 
 from neural_style_mod import transform
 
-connection = pika.BlockingConnection(
-    pika.ConnectionParameters(host='rabbitmq'))
-channel = connection.channel()
-channel.queue_declare(queue='task_queue', durable=True)
 
-channel.basic_qos(prefetch_count=1)
-channel.basic_consume(queue='task_queue', on_message_callback=callback)
-
-channel.start_consuming()
 
 def upload_picture_to_bucket(image_bytes, hash_value):
     """
@@ -69,9 +61,6 @@ def send_to_logs(message):
     hash, HTTP status code, worker name, and error message (if applicable)
 
     """
-    connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host='rabbitmq'))
-    channel = connection.channel()
     channel.exchange_declare(exchange='logs', exchange_type='topic')
     channel.basic_publish(
         exchange='logs',
@@ -80,8 +69,6 @@ def send_to_logs(message):
         properties=pika.BasicProperties(
             delivery_mode=2,
         ))
-    connection.close()
-
 
 def _imread(image_file_or_path):
     """Utility function to convert image to same format as style transfer library requires.
@@ -111,11 +98,12 @@ def callback(ch, method, properties, body):
     try:
         data = jsonpickle.decode(body)
         hash_value = data['hash']
+        iterations = data['iterations']
 
         #Get file type object for target and style so we can use imread helper.
         target_image = io.BytesIO(data['content'])
         style_image = io.BytesIO(data['style'])
-        transformed_image = transform(_imread(target_image), _imread(style_image))
+        transformed_image = transform(_imread(target_image), _imread(style_image), iterations)
 
         #Convert back to bytes from np floating point array
         transformed_image_bytes = io.BytesIO()
@@ -128,3 +116,28 @@ def callback(ch, method, properties, body):
 
     except Exception as e:
         send_to_logs(str(e))
+
+
+while True:
+    try:
+        connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host='rabbitmq', heartbeat=0))
+        channel = connection.channel()
+        channel.queue_declare(queue='task_queue', durable=True)
+
+        channel.basic_qos(prefetch_count=1)
+        channel.basic_consume(queue='task_queue', on_message_callback=callback)
+
+        channel.start_consuming()
+
+        # Don't recover if connection was closed by broker
+    except pika.exceptions.ConnectionClosedByBroker:
+        break
+        # Don't recover on channel errors
+    except pika.exceptions.AMQPChannelError:
+        break
+        # Recover on all other connection errors
+    except pika.exceptions.AMQPConnectionError:
+        continue
+    except pika.exceptions.ConnectionWrongStateError:
+        continue
