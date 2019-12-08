@@ -7,6 +7,7 @@ from collections import OrderedDict
 from PIL import Image
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras import backend as K
 
 import vgg
 
@@ -47,6 +48,16 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
 
     :rtype: iterator[tuple[int,image]]
     """
+    curr_session = tf.get_default_session()
+    # close current session
+    if curr_session is not None:
+        curr_session.close()
+    # reset graph
+    K.clear_session()
+    # create new session
+    s = tf.InteractiveSession()
+    K.set_session(s)
+    
     shape = (1,) + content.shape
     style_shapes = [(1,) + style.shape for style in styles]
     content_features = {}

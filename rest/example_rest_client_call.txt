@@ -1,2 +1,2 @@
-python3 rest_client.py 34.83.88.166 image -style_file=ny.jpg  -content_file=snight.jpg
-python3 rest_client.py 34.83.88.166 transformed -hash=c7f7a8843e7646719ec101170169c960
+python3 rest_client.py 35.232.96.31 image 200 -style_file=ny.jpg  -content_file=snight.jpg
+python3 rest_client.py 35.232.96.31 transformed -hash=c7f7a8843e7646719ec101170169c960
