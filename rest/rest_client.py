@@ -28,9 +28,13 @@ def get_pics(address, hash):
     response = requests.get(address + '/image/' + hash)
     while response is None:
         pass
+    if 'message' in response.json():
+        print(response.json())
+        return response.json()['message']
+    data = jsonpickle.decode(response.content)
     byte_stream = io.BytesIO()
-    byte_stream.write(response.json()['image'])
-    image = image.open(byte_stream)
+    byte_stream.write(data['image'])
+    image = Image.open(byte_stream)
     image.save(hash + '.jpg', format='JPEG')
     print('Image finished saving')
 
@@ -74,4 +78,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(args.server_address, args.endpoint, args.content_file,
-         args.style_file)
+         args.style_file, args.image_hash)
