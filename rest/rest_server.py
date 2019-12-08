@@ -80,8 +80,8 @@ def send_to_logs(message):
 #FLASK APP CODE FOR ENDPOINTS
 app = Flask(__name__)
 
-@app.route('/image', methods=['PUT'])
-def transform_image():
+@app.route('/image/<iterations>', methods=['PUT'])
+def transform_image(iterations):
     """
     Route to style transfer two images.
 
@@ -94,9 +94,11 @@ def transform_image():
     """
 
     try:
+        iterations = int(iterations)
         data = jsonpickle.decode(request.data)
         hash = hashlib.md5(data["content"]).hexdigest()
         data.update({"hash": hash})
+        data.update({'iterations': iterations})
         send_to_worker_queue(jsonpickle.encode(data))
         response = {
             "hash" : hash,

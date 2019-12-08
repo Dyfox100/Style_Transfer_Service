@@ -79,7 +79,7 @@ def fmt_imsave(fmt, iteration):
         raise ValueError("illegal format string '{}'".format(fmt))
 
 
-def transform(content_file, style_file):
+def transform(content_file, style_file, iterations):
 
     # https://stackoverflow.com/a/42121886
     key = 'TF_CPP_MIN_LOG_LEVEL'
@@ -140,7 +140,7 @@ def transform(content_file, style_file):
         content=content_image,
         styles=style_images,
         preserve_colors=options.preserve_colors,
-        iterations=options.iterations,
+        iterations=iterations,
         content_weight=CONTENT_WEIGHT,
         content_weight_blend=CONTENT_WEIGHT_BLEND,
         style_weight=STYLE_WEIGHT,
