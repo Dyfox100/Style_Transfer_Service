@@ -1,0 +1,34 @@
+apiVersion: v1
+items:
+- apiVersion: autoscaling/v1
+  kind: HorizontalPodAutoscaler
+  metadata:
+    annotations:
+      autoscaling.alpha.kubernetes.io/conditions: '[{"type":"AbleToScale","status":"True","lastTransitionTime":"2019-12-09T19:34:28Z","reason":"ScaleDownStabilized","message":"recent
+        recommendations were higher than current one, applying the highest recent
+        recommendation"},{"type":"ScalingActive","status":"True","lastTransitionTime":"2019-12-09T19:34:29Z","reason":"ValidMetricFound","message":"the
+        HPA was able to successfully calculate a replica count from external metric
+        kubernetes.io|container|accelerator|duty_cycle(\u0026LabelSelector{MatchLabels:map[string]string{},MatchExpressions:[],})"},{"type":"ScalingLimited","status":"False","lastTransitionTime":"2019-12-09T19:34:29Z","reason":"DesiredWithinRange","message":"the
+        desired count is within the acceptable range"}]'
+      autoscaling.alpha.kubernetes.io/current-metrics: '[{"type":"External","external":{"metricName":"kubernetes.io|container|accelerator|duty_cycle","metricSelector":{},"currentValue":"0"}}]'
+      autoscaling.alpha.kubernetes.io/metrics: '[{"type":"External","external":{"metricName":"kubernetes.io|container|accelerator|duty_cycle","metricSelector":{},"targetValue":"50"}}]'
+    creationTimestamp: "2019-12-09T19:34:13Z"
+    name: worker-server
+    namespace: default
+    resourceVersion: "318106"
+    selfLink: /apis/autoscaling/v1/namespaces/default/horizontalpodautoscalers/worker-server
+    uid: e19c7f45-1aba-11ea-b0d0-42010a80018b
+  spec:
+    maxReplicas: 3
+    minReplicas: 1
+    scaleTargetRef:
+      apiVersion: apps/v1
+      kind: Deployment
+      name: worker-server
+  status:
+    currentReplicas: 1
+    desiredReplicas: 1
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""
