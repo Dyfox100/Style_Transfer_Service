@@ -11,7 +11,7 @@ items:
         kubernetes.io|container|accelerator|duty_cycle(\u0026LabelSelector{MatchLabels:map[string]string{},MatchExpressions:[],})"},{"type":"ScalingLimited","status":"False","lastTransitionTime":"2019-12-09T19:34:29Z","reason":"DesiredWithinRange","message":"the
         desired count is within the acceptable range"}]'
       autoscaling.alpha.kubernetes.io/current-metrics: '[{"type":"External","external":{"metricName":"kubernetes.io|container|accelerator|duty_cycle","metricSelector":{},"currentValue":"0"}}]'
-      autoscaling.alpha.kubernetes.io/metrics: '[{"type":"External","external":{"metricName":"kubernetes.io|container|accelerator|duty_cycle","metricSelector":{},"targetValue":"96"}}]'
+      autoscaling.alpha.kubernetes.io/metrics: '[{"type":"External","external":{"metricName":"kubernetes.io|container|accelerator|duty_cycle","metricSelector":{},"targetValue":"50"}}]'
     creationTimestamp: "2019-12-09T19:34:13Z"
     name: worker-server
     namespace: default
