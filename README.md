@@ -21,3 +21,5 @@ Alternatively, use the rest_client.py script to send requests. Usage of this scr
 ## Architecture
 STS is built upon kubernetes, docker, redis, rabbitmq, flask, and google cloud. Each training request will be run on an instance of the worker code with a nvidia Tesla K80 gpu to facilitate training at a reasonable speed. The system will scale up to a maximum of 3 gpu instances at a time. If more than 3 concurrent training requests are issued, the requests will queue in RabbitMQ and be delt with once one of the gpu instances is free. All of the training requests are queued in RabbitMQ and will retry if the neural network fails to train. The resulting images are stored in a GCP bucket. The addresses and image hashes are stored in Redis for retrieval. See below diagram.
 
+![Archetecture Diagram](https://github.com/Dyfox100/Style_Transfer_Service/blob/master/Data%20Flow%20Diagram.jpeg)
+
